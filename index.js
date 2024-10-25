@@ -10,7 +10,6 @@ const fs = require('fs');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
 const db = new sqlite3.Database(':memory:');
 
 db.serialize(() => {
@@ -20,7 +19,7 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL
     )
-  `);
+`);
   
   db.run(`
     CREATE TABLE IF NOT EXISTS contacts (
@@ -41,9 +40,8 @@ app.post('/api/register', (req, res) => {
       return res.status(400).json({ message: 'User already exists.' });
     }
     res.json({ message: 'User registered successfully.' });
-  });
-});
-
+  });});
+  
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   db.get(`SELECT * FROM users WHERE email = ? AND password = ?`, [email, password], (err, row) => {
@@ -55,7 +53,6 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// Middleware to authenticate JWT
 const authenticateJWT = (req, res, next) => {
   const token = req.headers['authorization'] && req.headers['authorization'].split(' ')[1];
   if (token) {
@@ -80,12 +77,14 @@ app.get('/api/contacts', authenticateJWT, (req, res) => {
 
 app.post('/api/contacts', authenticateJWT, (req, res) => {
   const { name, email, phone, address, timezone } = req.body;
-  db.run(`INSERT INTO contacts (name, email, phone, address, timezone) VALUES (?, ?, ?, ?, ?)`, [name, email, phone, address, timezone], function(err) {
-    if (err) {
-      return res.status(400).json({ message: 'Error adding contact.' });
-    }
-    res.json({ message: 'Contact added successfully.' });
-  });
+  db.run(`INSERT INTO contacts (name, email, phone, address, timezone) VALUES (?, ?, ?, ?, ?)`, 
+    [name, email, phone, address, timezone], 
+    function(err) {
+      if (err) {
+        return res.status(400).json({ message: 'Error adding contact.' });
+      }
+      res.json({ message: 'Contact added successfully.' });
+    });
 });
 
 const upload = multer({ dest: 'uploads/' });
@@ -98,16 +97,17 @@ app.post('/api/upload/csv', [authenticateJWT, upload.single('file')], (req, res)
     .on('end', () => {
       const insertPromises = results.map(contact => {
         return new Promise((resolve, reject) => {
-          db.run(`INSERT INTO contacts (name, email, phone, address, timezone) VALUES (?, ?, ?, ?, ?)`, [contact.name, contact.email, contact.phone, contact.address, contact.timezone], function(err) {
-            if (err) reject(err);
-            else resolve();
-          });
+          db.run(`INSERT INTO contacts (name, email, phone, address, timezone) VALUES (?, ?, ?, ?, ?)`, 
+            [contact.name, contact.email, contact.phone, contact.address, contact.timezone], 
+            function(err) {
+              if (err) reject(err);
+              else resolve();
+            });
         });
       });
-
       Promise.all(insertPromises)
         .then(() => {
-          fs.unlinkSync(req.file.path); // Delete the uploaded file
+          fs.unlinkSync(req.file.path);
           res.json({ message: 'Contacts uploaded successfully.' });
         })
         .catch(err => {
@@ -115,7 +115,6 @@ app.post('/api/upload/csv', [authenticateJWT, upload.single('file')], (req, res)
         });
     });
 });
-
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
